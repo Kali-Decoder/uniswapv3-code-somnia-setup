@@ -5,9 +5,9 @@ libs = ['lib']
 fs_permissions = [{access='read', path='.'}]
 viaIR = true
 optimizer = true
-solc = "0.8.19"
+solc = "0.8.14"
 
 
 [rpc_endpoints]
-somnia = "https://dream-rpc.somnia.network"
+somnia = "https://rpc.ankr.com/somnia_testnet/e69e9ce37f763b569885131b805a8b772d24792af2d1cb0de133b75b4fd19b66"
 monad  = "https://testnet-rpc.monad.xyz"

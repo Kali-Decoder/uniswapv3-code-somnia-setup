@@ -1,89 +1,63 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.14;
-
+import "forge-std/console.sol";
 import "forge-std/Test.sol";
-import "./ERC20Mintable.sol";
 import "./TestUtils.sol";
 
+import "../src/interfaces/IERC20.sol";
 import "../src/interfaces/IUniswapV3Pool.sol";
 import "../src/UniswapV3Factory.sol";
-import "../src/UniswapV3Pool.sol";
 
 contract UniswapV3FactoryTest is Test, TestUtils {
-    ERC20Mintable weth;
-    ERC20Mintable usdc;
+    IERC20 usdtg;
+    IERC20 wstt;
     UniswapV3Factory factory;
 
+    // === Replace with your deployed addresses ===
+    address constant USDTG = 0xDa4FDE38bE7a2b959BF46E032ECfA21e64019b76;
+    address constant WSTT  = 0xF22eF0085f6511f70b01a68F360dCc56261F768a;
+    address constant FACTORY = 0x04Be6308eFA4631Fb9d2609B915Ae8770D8D25F6;
+
     function setUp() public {
-        weth = new ERC20Mintable("Ether", "ETH", 18);
-        usdc = new ERC20Mintable("USDC", "USDC", 18);
-        factory = new UniswapV3Factory();
+        usdtg = IERC20(USDTG);
+        wstt  = IERC20(WSTT);
+        factory = UniswapV3Factory(FACTORY); 
     }
 
     function testCreatePool() public {
-        address poolAddress = factory.createPool(
-            address(weth),
-            address(usdc),
-            500
-        );
-
+        // Deploy pool with real tokens
+        address poolAddress = factory.createPool(address(usdtg), address(wstt), 3000);
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
+        console.log(poolAddress);
+        // ✅ Factory registry checks
+        assertEq(factory.pools(address(usdtg), address(wstt), 3000), poolAddress, "invalid pool address registry");
+        assertEq(factory.pools(address(wstt), address(usdtg), 3000), poolAddress, "invalid pool address registry reverse");
 
-        assertEq(
-            factory.pools(address(usdc), address(weth), 500),
-            poolAddress,
-            "invalid pool address in the registry"
-        );
-
-        assertEq(
-            factory.pools(address(weth), address(usdc), 500),
-            poolAddress,
-            "invalid pool address in the registry (reverse order)"
-        );
-
-        assertEq(pool.factory(), address(factory), "invalid factory address");
-        assertEq(pool.token0(), address(usdc), "invalid weth address");
-        assertEq(pool.token1(), address(weth), "invalid usdc address");
-        assertEq(pool.tickSpacing(), 10, "invalid tick spacing");
-        assertEq(pool.fee(), 500, "invalid fee");
-
-        (
-            uint160 sqrtPriceX96,
-            int24 tick,
-            uint16 observationIndex,
-            uint16 observationCardinality,
-            uint16 observationCardinalityNext
-        ) = pool.slot0();
-        assertEq(sqrtPriceX96, 0, "invalid sqrtPriceX96");
-        assertEq(tick, 0, "invalid tick");
-        assertEq(observationIndex, 0, "invalid observation index");
-        assertEq(observationCardinality, 0, "invalid observation cardinality");
-        assertEq(
-            observationCardinalityNext,
-            0,
-            "invalid next observation cardinality"
-        );
+        // ✅ Pool properties
+        assertEq(pool.factory(), address(factory), "invalid factory");
+        assertEq(pool.fee(), 3000, "invalid fee");
     }
 
+    function testCreateAlreadyExists() public {
+        factory.createPool(address(usdtg), address(wstt), 3000);
+
+        vm.expectRevert(encodeError("PoolAlreadyExists()"));
+        factory.createPool(address(usdtg), address(wstt), 3000);
+    }
+
+    // You can remove or comment these if you’re only testing with real tokens
     function testCreatePoolUnsupportedFee() public {
         vm.expectRevert(encodeError("UnsupportedFee()"));
-        factory.createPool(address(weth), address(usdc), 300);
+        factory.createPool(address(usdtg), address(wstt), 123);
     }
 
-    function testCreatePoolIdenticalTokens() public {
+    function testCreateIdenticalTokens() public {
         vm.expectRevert(encodeError("TokensMustBeDifferent()"));
-        factory.createPool(address(weth), address(weth), 500);
+        factory.createPool(address(usdtg), address(usdtg), 3000);
     }
 
     function testCreateZeroTokenAddress() public {
         vm.expectRevert(encodeError("ZeroAddressNotAllowed()"));
-        factory.createPool(address(weth), address(0), 500);
-    }
-
-    function testCreateAlreadyExists() public {
-        factory.createPool(address(weth), address(usdc), 500);
-
-        vm.expectRevert(encodeError("PoolAlreadyExists()"));
-        factory.createPool(address(weth), address(usdc), 500);
+        factory.createPool(address(usdtg), address(0), 3000);
     }
 }

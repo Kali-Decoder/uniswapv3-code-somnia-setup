@@ -3,7 +3,7 @@ pragma solidity ^0.8.14;
 
 import "forge-std/console.sol";
 import "forge-std/Script.sol";
-
+import "../src/interfaces/IERC20.sol";
 import "../src/interfaces/IUniswapV3Manager.sol";
 import "../src/lib/FixedPoint96.sol";
 import "../src/lib/Math.sol";
@@ -11,136 +11,62 @@ import "../src/UniswapV3Factory.sol";
 import "../src/UniswapV3Manager.sol";
 import "../src/UniswapV3Pool.sol";
 import "../src/UniswapV3Quoter.sol";
-import "../test/ERC20Mintable.sol";
 import "../test/TestUtils.sol";
 
 contract DeployDevelopment is Script, TestUtils {
-    struct TokenBalances {
-        uint256 uni;
-        uint256 usdc;
-        uint256 usdt;
-        uint256 wbtc;
-        uint256 weth;
-    }
-
-    TokenBalances balances =
-        TokenBalances({
-            uni: 200 ether,
-            usdc: 2_000_000 ether,
-            usdt: 2_000_000 ether,
-            wbtc: 20 ether,
-            weth: 100 ether
-        });
-
     function run() public {
-        // DEPLOYING STARGED
-        vm.startBroadcast();
+        uint256 deployerKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerKey);
 
-        ERC20Mintable weth = new ERC20Mintable("Wrapped Ether", "WETH", 18);
-        ERC20Mintable usdc = new ERC20Mintable("USD Coin", "USDC", 18);
-        ERC20Mintable uni = new ERC20Mintable("Uniswap Coin", "UNI", 18);
-        ERC20Mintable wbtc = new ERC20Mintable("Wrapped Bitcoin", "WBTC", 18);
-        ERC20Mintable usdt = new ERC20Mintable("USD Token", "USDT", 18);
+        console.log("Deployer",msg.sender);
 
+        // === USE EXISTING TOKENS VIA IERC20 ===
+        IERC20 usdtg  = IERC20(0xDa4FDE38bE7a2b959BF46E032ECfA21e64019b76);
+        IERC20 wstt   = IERC20(0xF22eF0085f6511f70b01a68F360dCc56261F768a);
+        IERC20 pumpaz = IERC20(0x4eF3C7cd01a7d2FB9E34d6116DdcB9578E8f5d58);
+        IERC20 nia    = IERC20(0xF2F773753cEbEFaF9b68b841d80C083b18C69311);
+        IERC20 check  = IERC20(0xA356306eEd1Ec9b1b9cdAed37bb7715787ae08A8);
+
+        // === DEPLOY UNISWAP CONTRACTS ===
         UniswapV3Factory factory = new UniswapV3Factory();
         UniswapV3Manager manager = new UniswapV3Manager(address(factory));
         UniswapV3Quoter quoter = new UniswapV3Quoter(address(factory));
 
-        UniswapV3Pool wethUsdc = deployPool(
+        // === CREATE POOLS WITH EXISTING TOKENS ===
+        // Example pools (you can adjust fee tier + sqrtPriceX96 init)
+        UniswapV3Pool poolUsdtgWstt = deployPool(
             factory,
-            address(weth),
-            address(usdc),
-            3000,
-            5000
+            address(usdtg),
+            address(wstt),
+            3000, // fee
+            1     // sqrtPriceX96 (initial price)
         );
 
-        UniswapV3Pool wethUni = deployPool(
+        UniswapV3Pool poolPumpazNia = deployPool(
             factory,
-            address(weth),
-            address(uni),
+            address(pumpaz),
+            address(nia),
             3000,
-            10
-        );
-
-        UniswapV3Pool wbtcUSDT = deployPool(
-            factory,
-            address(wbtc),
-            address(usdt),
-            3000,
-            20_000
-        );
-
-        UniswapV3Pool usdtUSDC = deployPool(
-            factory,
-            address(usdt),
-            address(usdc),
-            500,
             1
         );
 
-        uni.mint(msg.sender, balances.uni);
-        usdc.mint(msg.sender, balances.usdc);
-        usdt.mint(msg.sender, balances.usdt);
-        wbtc.mint(msg.sender, balances.wbtc);
-        weth.mint(msg.sender, balances.weth);
-
-        // uni.approve(address(manager), 100 ether);
-        // usdc.approve(address(manager), 1_005_000 ether);
-        // usdt.approve(address(manager), 1_200_000 ether);
-        // wbtc.approve(address(manager), 10 ether);
-        // weth.approve(address(manager), 11 ether);
-
-        // manager.mint(
-        //     mintParams(
-        //         address(weth),
-        //         address(usdc),
-        //         4545,
-        //         5500,
-        //         1 ether,
-        //         5000 ether
-        //     )
-        // );
-        // manager.mint(
-        //     mintParams(address(weth), address(uni), 7, 13, 10 ether, 100 ether)
-        // );
-
-        // manager.mint(
-        //     mintParams(
-        //         address(wbtc),
-        //         address(usdt),
-        //         19400,
-        //         20500,
-        //         10 ether,
-        //         200_000 ether
-        //     )
-        // );
-        // manager.mint(
-        //     mintParams(
-        //         address(usdt),
-        //         address(usdc),
-        //         uint160(77222060634363714391462903808), //  0.95, int(math.sqrt(0.95) * 2**96)
-        //         uint160(81286379615119694729911992320), // ~1.05, int(math.sqrt(1/0.95) * 2**96)
-        //         1_000_000 ether,
-        //         1_000_000 ether,
-        //         500
-        //     )
-        // );
+        UniswapV3Pool poolCheckUsdtg = deployPool(
+            factory,
+            address(check),
+            address(usdtg),
+            3000,
+            1
+        );
 
         vm.stopBroadcast();
 
-        console.log("WETH address", address(weth));
-        console.log("UNI address", address(uni));
-        console.log("USDC address", address(usdc));
-        console.log("USDT address", address(usdt));
-        console.log("WBTC address", address(wbtc));
-
+        // === LOG ADDRESSES ===
         console.log("Factory address", address(factory));
         console.log("Manager address", address(manager));
         console.log("Quoter address", address(quoter));
 
-        console.log("USDT/USDC address", address(usdtUSDC));
-        console.log("WBTC/USDT address", address(wbtcUSDT));
-        console.log("WETH/UNI address", address(wethUni));
-        console.log("WETH/USDC address", address(wethUsdc));
+        console.log("USDTG/WSTT pool:", address(poolUsdtgWstt));
+        console.log("PUMPAZ/NIA pool:", address(poolPumpazNia));
+        console.log("CHECK/USDTG pool:", address(poolCheckUsdtg));
     }
 }
