@@ -1,7 +1,7 @@
 .env.local
 .env
 broadcast/
-lib
+/lib
 cache/
 out/
 __pycache__
