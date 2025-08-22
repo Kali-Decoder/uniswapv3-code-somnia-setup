@@ -41,14 +41,16 @@ abstract contract TestUtils is Test, Assertions {
         pure
         returns (int24 result)
     {
-        result =
+        int24 rounded =
             int24(divRound(int128(tick_), int128(int24(tickSpacing)))) *
             int24(tickSpacing);
 
         if (result < TickMath.MIN_TICK) {
-            result += int24(tickSpacing);
+            result = TickMath.MIN_TICK;
         } else if (result > TickMath.MAX_TICK) {
-            result -= int24(tickSpacing);
+            result = TickMath.MAX_TICK;
+        }else{
+            result = rounded;
         }
     }
 
