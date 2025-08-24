@@ -3,75 +3,55 @@ import config from "../config";
 
 async function addLiquidityPool() {
   const CONTRACT_NAME = "UniswapV3Manager";
-  const TokenName = "MockToken";
   const UTILS_CONTRACT_NAME = "TestUtils";
+  const TOKEN_NAME = "MockToken";
 
-  const token1 = config.usdtg;
-  const token0 = config.wstt;
-
-  const mintConfig = {
-    tokenA: token0,
-    tokenB: token1,
-    fee: 3000,
-    lowerTick: 4545,
-    upperTick: 5500,
-    amount0Desired: ethers.parseEther("2"),
-    amount1Desired: ethers.parseEther("1"),
-    amount0Min: 0,
-    amount1Min: 0,
-  };
-
+  const tokenA = config.usdtg;
+  const tokenB = config.wstt;
   const managerAddress = config.managerAddress;
 
   const sender = new ethers.Wallet(
-    process.env.DEPLOYER_ACCOUNT_PRIV_KEY as any,
+    process.env.DEPLOYER_ACCOUNT_PRIV_KEY as string,
     ethers.provider
   );
 
   console.log("Deployer address:", sender.address);
 
-  // Get token contracts
-  const usdtg = await ethers.getContractAt(TokenName, config.usdtg, sender);
-  const wstt = await ethers.getContractAt(TokenName, config.wstt, sender);
+  // === Get token contracts ===
+  const usdtg = await ethers.getContractAt(TOKEN_NAME, tokenA, sender);
+  const wstt = await ethers.getContractAt(TOKEN_NAME, tokenB, sender);
 
-  // Get manager contract
-  const managerContract = await ethers.getContractAt(
-    CONTRACT_NAME,
-    managerAddress,
-    sender
-  );
+  // === Get manager and utils contracts ===
+  const manager = await ethers.getContractAt(CONTRACT_NAME, managerAddress, sender);
+  const utilsContract = await ethers.getContractAt(UTILS_CONTRACT_NAME, config.testutils, sender);
 
-  // Get utils contract
-  const utilsContract = await ethers.getContractAt(
-    UTILS_CONTRACT_NAME,
-    config.testutils,
-    sender
-  );
-
-  // Check balances before
+  // === Balances before ===
   const balance0Before = await usdtg.balanceOf(sender.address);
   const balance1Before = await wstt.balanceOf(sender.address);
+
   console.log("Balances before mint:");
   console.log("USDTG:", ethers.formatEther(balance0Before));
   console.log("WSTT :", ethers.formatEther(balance1Before));
 
-  // Approve tokens
-  await (await usdtg.approve(managerAddress, mintConfig.amount0Desired)).wait();
-  await (await wstt.approve(managerAddress, mintConfig.amount1Desired)).wait();
-  console.log("Approved manager to spend tokens.");
+  // === Approve manager for max allowance ===
+  await (await usdtg.approve(managerAddress, ethers.MaxUint256)).wait();
+  await (await wstt.approve(managerAddress, ethers.MaxUint256)).wait();
+  console.log("✅ Approved manager for max allowance.");
 
-  // Build mint params using utils
-  let mintParams = await utilsContract.mintParams(
-    mintConfig.tokenA,
-    mintConfig.tokenB,
-    mintConfig.lowerTick,
-    mintConfig.upperTick,
-    mintConfig.amount0Desired,
-    mintConfig.amount1Desired
+  // === Build mint params from utils ===
+  const mintParams = await utilsContract.mintParams(
+    tokenA,
+    tokenB,
+    4545,        
+    5500,          
+    ethers.parseEther("1"), // amount0Desired
+    ethers.parseEther("1")  // amount1Desired
   );
 
-  // Call mint with struct
-  const tx = await managerContract.mint({
+  console.log("Mint parameters:", mintParams);
+
+  // // === Call mint ===
+  const tx = await manager.connect(sender).mint({
     tokenA: mintParams[0],
     tokenB: mintParams[1],
     fee: mintParams[2],
@@ -84,23 +64,22 @@ async function addLiquidityPool() {
   });
 
   const receipt = await tx.wait();
-  console.log("Mint transaction hash:", receipt.hash);
+  console.log("✅ Minted liquidity, tx hash:", receipt.hash);
 
-  // Check balances after
+  // === Balances after ===
   const balance0After = await usdtg.balanceOf(sender.address);
   const balance1After = await wstt.balanceOf(sender.address);
 
-  // Pool Balance 
+  const poolAddress = config.pools[0]["usdtg/wstt"];
+  const balance0Pool = await usdtg.balanceOf(poolAddress);
+  const balance1Pool = await wstt.balanceOf(poolAddress);
 
-  const balance0Pool = await usdtg.balanceOf(config.pools[0]["usdtg/wstt"]);
-  const balance1Pool = await wstt.balanceOf(config.pools[0]["usdtg/wstt"]);
   console.log("Balances after mint:");
   console.log("USDTG:", ethers.formatEther(balance0After));
   console.log("WSTT :", ethers.formatEther(balance1After));
 
   console.log("Pool USDTG:", ethers.formatEther(balance0Pool));
   console.log("Pool WSTT :", ethers.formatEther(balance1Pool));
-  
 }
 
 async function main() {
