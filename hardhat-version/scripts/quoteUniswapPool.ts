@@ -1,61 +1,68 @@
 import { ethers } from "hardhat";
 import config from "../config";
 
-async function addLiquidityPool() {
-  const CONTRACT_NAME = "UniswapV3Quoter";
-  const FactoryContractName = 'UniswapV3Factory';
+async function quoteSwap() {
+  const QUOTER_NAME = "UniswapV3Quoter";
   const TokenName = "MockToken";
   const UTILS_CONTRACT_NAME = "TestUtils";
 
-  const token0 = config.usdtg;
-  const token1 = config.wstt;
+  const tokenIn = config.usdtg;   // input token
+  const tokenOut = config.wstt;   // output token
+  const fee = 3000;               // 0.3% pool fee
+  const amountIn = ethers.parseEther("1"); // amount of tokenIn
 
+  const quoterAddress = config.quoterAddress;
+  const testAddress = config.testutils;
 
-
-  const quoteAddress = config.quoterAddress;
   const sender = new ethers.Wallet(
-    process.env.DEPLOYER_ACCOUNT_PRIV_KEY as any,
+    process.env.DEPLOYER_ACCOUNT_PRIV_KEY as string,
     ethers.provider
   );
 
   console.log("Deployer address:", sender.address);
 
+  // Attach contracts
+  const utilsContract = await ethers.getContractAt(UTILS_CONTRACT_NAME, testAddress, sender);
+  const quoter = await ethers.getContractAt(QUOTER_NAME, quoterAddress, sender);
 
+  // Calculate initial sqrtPrice
+  const sqrtPrice = await utilsContract.sqrtP(5000);
 
-  // Get token contracts
-  const usdtg = await ethers.getContractAt(TokenName, config.usdtg, sender);
-  const wstt = await ethers.getContractAt(TokenName, config.wstt, sender);
+  // Build params
+  const params = {
+    tokenIn:tokenOut,
+    tokenOut:tokenIn,
+    fee,
+    amountIn,
+    sqrtPriceLimitX96: sqrtPrice,
+  };
 
+  console.log("Quote params:", params);
 
-  const quoteContract = await ethers.getContractAt(
-    CONTRACT_NAME,
-    quoteAddress,
-    sender
-  );
-
-
-  const utilsContract = await ethers.getContractAt(
-    UTILS_CONTRACT_NAME,
-    config.testutils,
-    sender
-  );
-
-  let pool = await utilsContract.deployPool(
-    config.factoryAddress,
-    token0,token1,3000,5000
-  );
-
-  console.log(pool);
-
-
- 
-
-
-  
+  // === Run quote ===
+  try {
+    // Because it's not view, we use callStatic to simulate
+    const result = await quoter.quoteSingle.staticCall(params);
+    console.log("Quote result:", result);
+  } catch (error) {
+    // If revert contains encoded result
+    if (error?.data) {
+      const [amountOut, sqrtPriceX96After, tickAfter] = ethers.AbiCoder.defaultAbiCoder().decode(
+        ["uint256", "uint160", "int24"],
+        error?.data
+      );
+      console.log("Decoded result:");
+      console.log("AmountOut:", amountOut.toString());
+      console.log("SqrtPriceX96After:", sqrtPriceX96After.toString());
+      console.log("TickAfter:", tickAfter.toString());
+    } else {
+      console.error("Unexpected error:", error);
+    }
+  }
 }
 
 async function main() {
-  await addLiquidityPool();
+  await quoteSwap();
 }
 
 main().catch((error) => {
