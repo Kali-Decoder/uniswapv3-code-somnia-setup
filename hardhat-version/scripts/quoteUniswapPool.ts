@@ -1,15 +1,10 @@
 import { ethers } from "hardhat";
 import config from "../config";
 
-async function quoteSwap() {
+async function quoteSwap(tokenIn: string, tokenOut: string, amountIn: bigint) {
   const QUOTER_NAME = "UniswapV3Quoter";
-  const TokenName = "MockToken";
   const UTILS_CONTRACT_NAME = "TestUtils";
-
-  const tokenIn = config.usdtg;   // input token
-  const tokenOut = config.wstt;   // output token
-  const fee = 3000;               // 0.3% pool fee
-  const amountIn = ethers.parseEther("1"); // amount of tokenIn
+  const fee = 3000; // 0.3% pool fee
 
   const quoterAddress = config.quoterAddress;
   const testAddress = config.testutils;
@@ -25,33 +20,31 @@ async function quoteSwap() {
   const utilsContract = await ethers.getContractAt(UTILS_CONTRACT_NAME, testAddress, sender);
   const quoter = await ethers.getContractAt(QUOTER_NAME, quoterAddress, sender);
 
-  // Calculate initial sqrtPrice
+  // Calculate initial sqrtPrice (example: pool with 5000 price)
   const sqrtPrice = await utilsContract.sqrtP(5000);
 
   // Build params
   const params = {
-    tokenIn:tokenOut,
-    tokenOut:tokenIn,
+    tokenIn,
+    tokenOut,
     fee,
     amountIn,
     sqrtPriceLimitX96: sqrtPrice,
   };
 
-  console.log("Quote params:", params);
+  console.log(`Quote params for ${tokenIn} -> ${tokenOut}:`, params);
 
-  // === Run quote ===
   try {
-    // Because it's not view, we use callStatic to simulate
+    // Simulate quoteSingle
     const result = await quoter.quoteSingle.staticCall(params);
-    console.log("Quote result:", result);
-  } catch (error) {
-    // If revert contains encoded result
+    console.log(`Quote result ${tokenIn} -> ${tokenOut}:`, result);
+  } catch (error: any) {
     if (error?.data) {
       const [amountOut, sqrtPriceX96After, tickAfter] = ethers.AbiCoder.defaultAbiCoder().decode(
         ["uint256", "uint160", "int24"],
-        error?.data
+        error.data
       );
-      console.log("Decoded result:");
+      console.log(`Decoded result ${tokenIn} -> ${tokenOut}:`);
       console.log("AmountOut:", amountOut.toString());
       console.log("SqrtPriceX96After:", sqrtPriceX96After.toString());
       console.log("TickAfter:", tickAfter.toString());
@@ -62,7 +55,15 @@ async function quoteSwap() {
 }
 
 async function main() {
-  await quoteSwap();
+  const tokenA = config.usdtg;
+  const tokenB = config.wstt;
+  const amount = ethers.parseEther("1"); // 1 token
+
+  console.log("=== TokenA -> TokenB ===");
+  await quoteSwap(tokenA, tokenB, amount);
+
+  console.log("\n=== TokenB -> TokenA ===");
+  await quoteSwap(tokenB, tokenA, amount);
 }
 
 main().catch((error) => {
