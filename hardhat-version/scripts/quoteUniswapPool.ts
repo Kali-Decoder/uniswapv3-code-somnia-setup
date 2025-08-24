@@ -4,6 +4,7 @@ import config from "../config";
 async function quoteSwap(tokenIn: string, tokenOut: string, amountIn: bigint) {
   const QUOTER_NAME = "UniswapV3Quoter";
   const UTILS_CONTRACT_NAME = "TestUtils";
+  const TOKEN_NAME = "MockToken";
   const fee = 3000; // 0.3% pool fee
 
   const quoterAddress = config.quoterAddress;
@@ -17,11 +18,13 @@ async function quoteSwap(tokenIn: string, tokenOut: string, amountIn: bigint) {
   console.log("Deployer address:", sender.address);
 
   // Attach contracts
+  const tokenInContract = await ethers.getContractAt(TOKEN_NAME, tokenIn, sender);
+  const tokenOutContract = await ethers.getContractAt(TOKEN_NAME, tokenOut, sender);
   const utilsContract = await ethers.getContractAt(UTILS_CONTRACT_NAME, testAddress, sender);
   const quoter = await ethers.getContractAt(QUOTER_NAME, quoterAddress, sender);
 
   // Calculate initial sqrtPrice (example: pool with 5000 price)
-  const sqrtPrice = await utilsContract.sqrtP(5000);
+  const sqrtPrice = await utilsContract.sqrtP(4545);
 
   // Build params
   const params = {

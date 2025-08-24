@@ -40,8 +40,8 @@ async function addLiquidityPool() {
 
   // === Build mint params from utils ===
   const mintParams = await utilsContract.mintParams(
-    tokenA,
     tokenB,
+    tokenA,
     4545,        
     5500,          
     ethers.parseEther("1"), // amount0Desired

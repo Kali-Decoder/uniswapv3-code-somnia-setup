@@ -1,6 +1,7 @@
 import "dotenv/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-verify";
+
 const ACCOUNTS = process.env.DEPLOYER_ACCOUNT_PRIV_KEY
   ? [`${process.env.DEPLOYER_ACCOUNT_PRIV_KEY}`]
   : [];
@@ -11,17 +12,19 @@ module.exports = {
     enabled: false,
   },
   networks: {
-    hardhat: { chainId: 31337 },
+    hardhat: { 
+      chainId: 31337,
+      allowUnlimitedContractSize: true, // 🔥 allow bigger contracts in local testing
+    },
     somniaTestnet: {
       chainId: 50312,
       url: "http://dream-rpc.somnia.network/",
       accounts: ACCOUNTS,
+      allowUnlimitedContractSize: true, // 🔥 useful if contract is very large
     }
   },
   etherscan: {
-    apiKey: {
-
-    },
+    apiKey: {},
     customChains: [
       {
         network: "somniaTestnet",
@@ -30,7 +33,7 @@ module.exports = {
           apiURL: "https://explorer.evm.iota.org/api",
           browserURL: "https://shannon-explorer.somnia.network/",
         },
-      }
+      },
     ],
   },
   sourcify: {
@@ -44,7 +47,11 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
+      viaIR: true, // ⚡ helps reduce contract size
     },
+  },
+  mocha: {
+    timeout: 100000000, // ⏳ increase test timeout
   },
   paths: {
     sources: "./contracts",
