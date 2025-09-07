@@ -39,8 +39,8 @@ async function createPool() {
   };
 
   // pool setup
-  const token0Symbol = "USDTG";
-  const token1Symbol = "WSTT";
+  const token0Symbol = "WSTT";
+  const token1Symbol = "NIA";
   const token0 = tokens[token0Symbol];
   const token1 = tokens[token1Symbol];
   const poolName = `${token0Symbol}-${token1Symbol}`;
