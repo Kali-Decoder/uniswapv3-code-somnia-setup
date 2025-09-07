@@ -1,0 +1,25 @@
+{
+  "network": "somniaTestnet",
+  "uniswap": {
+    "factory": "0x7dB6e3e494415bFE56805a34C125CDCC0A1E01A8",
+    "manager": "0xAB4d81E38425E3a116DDF3C2DFE104050179cfe5",
+    "quoter": "0x9458E3Bff01DA31cf956aE614E7cad98a2418121",
+    "testutils": "0x471D1f68d6A436BD1E5d3A0Fa6C72911614e3A0A"
+  },
+  "pools": {
+    "USDTG-WSTT": {
+      "address": "0xeB9cEBAb8766D9183d4CDbE9B74DB33d5EF6C51f",
+      "token0": "0xDa4FDE38bE7a2b959BF46E032ECfA21e64019b76",
+      "token1": "0xF22eF0085f6511f70b01a68F360dCc56261F768a",
+      "fee": 3000,
+      "slot0": {
+        "sqrtPriceX96": "5602277097478613991869082763264",
+        "tick": "85176",
+        "observationIndex": "0",
+        "observationCardinality": "1",
+        "observationCardinalityNext": "1"
+      },
+      "timestamp": 1757269293921
+    }
+  }
+}
